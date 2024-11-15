@@ -64,7 +64,7 @@ function myGameSetUp()
 
     -- Set up roll object
 
-    local rollImage = gfx.image.new("Images/tprollAnim1.png")
+    local rollImage = gfx.image.new("Images/tprollStatic.png")
     assert( rollImage )
     
     local rollSprite = gfx.sprite.new( rollImage )

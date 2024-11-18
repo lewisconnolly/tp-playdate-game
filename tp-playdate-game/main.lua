@@ -9,10 +9,12 @@ import "track.lua"
 import "roll.lua"
 
 local gfx <const> = playdate.graphics
-local epsilon = 0.000001
+local deltaTime = 0
 local horizonPcnt = 0.6
 local finishY = 180
 local startY = 60
+local finishScale = 2.0
+local startScale = 0.5
 local drinkInstance = nil
 local trackInstance = nil
 local rollInstance = nil
@@ -26,7 +28,7 @@ function myGameSetUp()
 
     local drinkSprite = gfx.sprite.new( drinkImage )    
     drinkSprite:setZIndex(-1)
-    drinkSprite:setScale(1.0)
+    drinkSprite:setScale(startScale)
 
     drinkInstance = Drink(drinkSprite, 0.9, 0.75)    
     
@@ -106,7 +108,11 @@ myGameSetUp()
 -- Use this function to poll input, run game logic, and move sprites.
 
 function playdate.update()
-
+    
+    -- Get time since last freme
+    deltaTime = playdate.getElapsedTime()
+    playdate.resetElapsedTime()
+    
     -- Poll the d-pad and move our player accordingly.
     -- (There are multiple ways to read the d-pad; this is the simplest.)
     -- Note that it is possible for more than one of these directions
@@ -156,46 +162,38 @@ function getCrankInput()
     local xPos, yPos = drinkInstance.sprite:getPosition()
     local currentTrackLength = trackInstance.length
 
+    -- If crank has been turned and drink is not at the finish line
     if crankTicks >= 1 then        
         if yPos <= finishY then            
-            -- play animation
+            -- Play track looping animation
             trackInstance.animationLoop.paused = false
             
             -- Decrease track length percentage of distance to simulate winding in
             trackInstance.length -= crankTicks / 1000
-            print("trackLength:", trackInstance.length)
             
-            local targetScale = 0.5 + (1.0 - (trackInstance.length / 0.6)) * (2.0 - 0.5)
-            local xPos, yPos = drinkInstance.sprite:getPosition()
-            local distToMove = targetScale - yPos
-
-
-            -- Scale drink to give appearance of it moving closer to screen
-            local xScale, yScale = drinkInstance.sprite:getScale()
-            -- Scale proportional to remaining track (get larger quicker as it moves towards screen to simulate perspective)
-            drinkInstance.sprite:setScale(xScale + trackInstance.length / 1000)
-            print("xScale:", xScale)
+            -- Scale drink proportional to remaining track (get larger quicker as it moves towards screen to simulate perspective)
+            local targetScale = startScale + (1.0 - (trackInstance.length / 1.0)) * (finishScale - startScale)                        
+            drinkInstance.sprite:setScale(targetScale, targetScale)
             
             -- After track reaches 'horizon', begin moving drink towards screen
             if trackInstance.length < horizonPcnt then        
+                -- Swap from looping animation to components animation
                 if trackInstance.isLongTrack then
                     swapTrack()
                     drinkInstance.sprite:setZIndex(2)
                     trackInstance.isLongTrack = false
                 end
-                local targetPos = startY + (1.0 - (trackInstance.length / 0.6)) * (finishY - startY)
+                -- After passing horizon, move drink by  the percentage of track that has passed the horizon point towards the finish y-position
+                local targetPos = startY + (1.0 - (trackInstance.length / horizonPcnt)) * (finishY - startY)
                 local xPos, yPos = drinkInstance.sprite:getPosition()
                 local distToMove = targetPos - yPos
-
-                print("targetPos:", targetPos)
-                print("yPos:", distToMove)
-                print("distToMove:", distToMove)
                 drinkInstance.sprite:moveBy( 0, distToMove )                                    
             end
         end        
     elseif crankTicks <= -1 then
 
     else
+        -- Stop track looping animation
         trackInstance.animationLoop.paused = true
     end
 end

@@ -48,11 +48,12 @@ function myGameSetUp()
     local trackAnimatedSprite = gfx.sprite.new(trackAnimationLoop:image())
     trackAnimatedSprite:setZIndex(1)
 
-    -- Move track sprite to scren position
+    -- Move track sprite to screen position
     trackAnimatedSprite:moveTo( 200, 120 )
     -- Add sprite to display list
     trackAnimatedSprite:add()
 
+    -- Make sprite update function loop animation
     trackAnimatedSprite.update = function()
         trackAnimatedSprite:setImage(trackAnimationLoop:image())
         -- Optionally, removing the sprite when the animation finished
@@ -118,37 +119,12 @@ function playdate.update()
     -- Note that it is possible for more than one of these directions
     -- to be pressed at once, if the user is pressing diagonally.
 
-    local xPos, yPos = drinkInstance.sprite:getPosition()
-
-    if playdate.buttonIsPressed( playdate.kButtonUp ) then
-        drinkInstance.sprite:moveBy( 0, -2 )
-        xPos, yPos = drinkInstance.sprite:getPosition()
-        print("yPos:", yPos)
-    end
-    if playdate.buttonIsPressed( playdate.kButtonRight ) then
-        drinkInstance.sprite:moveBy( 2, 0 )
-        xPos, yPos = drinkInstance.sprite:getPosition()
-        print("yPos:", yPos)
-    end
-    if playdate.buttonIsPressed( playdate.kButtonDown ) then
-        drinkInstance.sprite:moveBy( 0, 2 )
-        xPos, yPos = drinkInstance.sprite:getPosition()
-        print("yPos:", yPos)
-    end
-    if playdate.buttonIsPressed( playdate.kButtonLeft ) then        
-        drinkInstance.sprite:moveBy( -2, 0 )
-        xPos, yPos = drinkInstance.sprite:getPosition()
-        print("yPos:", yPos)
-    end
-
     -- Crank movement
-
     getCrankInput()
 
     -- Call the functions below in playdate.update() to draw sprites and keep
     -- timers updated. (We aren't using timers in this example, but in most
     -- average-complexity games, you will.)
-
     gfx.sprite.update()
     playdate.timer.updateTimers()
 
@@ -165,8 +141,12 @@ function getCrankInput()
     -- If crank has been turned and drink is not at the finish line
     if crankTicks >= 1 then        
         if yPos <= finishY then            
-            -- Play track looping animation
-            trackInstance.animationLoop.paused = false
+            -- Play track looping animation before track reaches horizon
+            if trackInstance.isLongTrack then
+                trackInstance.animationLoop.paused = false
+            else
+                trackInstance.animationLoop.paused = true
+            end
             
             -- Decrease track length percentage of distance to simulate winding in
             trackInstance.length -= crankTicks / 1000
@@ -187,7 +167,14 @@ function getCrankInput()
                 local targetPos = startY + (1.0 - (trackInstance.length / horizonPcnt)) * (finishY - startY)
                 local xPos, yPos = drinkInstance.sprite:getPosition()
                 local distToMove = targetPos - yPos
-                drinkInstance.sprite:moveBy( 0, distToMove )                                    
+                drinkInstance.sprite:moveBy( 0, distToMove ) 
+                
+                -- Change frame of track animation based on percentage of track remaining
+                local pcntAlongVisibleTrack = 1.0 - (trackInstance.length / horizonPcnt)
+                local matchingAnimFrame = math.floor(pcntAlongVisibleTrack * trackInstance.animationLoop.endFrame) -- endFrame returns total frames
+                trackInstance.animationLoop.frame = matchingAnimFrame
+                trackInstance.sprite:setImage(trackInstance.animationLoop:image())
+                print(matchingAnimFrame)                                 
             end
         end        
     elseif crankTicks <= -1 then

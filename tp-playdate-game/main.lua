@@ -10,13 +10,19 @@ import "roll.lua"
 
 local gfx <const> = playdate.graphics
 --local deltaTime = 0
-local horizonPcnt = 0.6 -- Percentage of track before the horizon
+local horizonPcnt = 0.5 -- Percentage of track before the horizon
+local absoluteTrackLength = 10000 -- Used to divide crank ticks by, resulting in more turns required to wind in track fully
 local finishY = 180 -- Finish line y-coord for drink
 local startY = 67 -- Starting y-coord of drink
 local finishScale = 2.0 -- Scale of drink at finish line
 local startScale = 0.5 -- Scale of drink at starting position
 local finalDrinkTargetPos = 0 -- The target position of the drink based on crank input at the end of each frame
 local crankTicks = 0 -- Store crank ticks
+local crankAcceleration = 0 -- Store crank acceleration
+
+-- Game properties
+local drinkFillAmount = 0.9
+local drinkStability = 0.5
 
 -- Game objects
 local drinkInstance = nil
@@ -25,20 +31,31 @@ local rollInstance = nil
 
 function setUpDrink()
     
-    -- Create sprite
-    local drinkImage = gfx.image.new("Images/glass0.png")
-    assert( drinkImage ) -- make sure the image was where we thought
+    -- Create sprite and animation loop
+    local wobbleFrameTime = 500 -- Each frame of the animation will last 500ms
+    local drinkWobbleAnimationImagetable = gfx.imagetable.new("Images/glassWobbleAnim")
+    assert( drinkWobbleAnimationImagetable ) -- make sure the images were where we thought
+    -- Setting the last argument to false makes the animation stop on the last frame
+    local drinkWobbleAnimationLoop = gfx.animation.loop.new(wobbleFrameTime, drinkWobbleAnimationImagetable, true)    
+    -- Set sprite image to first frame of the animation
+    local drinkSprite = gfx.sprite.new(drinkWobbleAnimationLoop:image())    
 
-    local drinkSprite = gfx.sprite.new( drinkImage )    
-    
-    -- Creat object
-    drinkInstance = Drink(drinkSprite, 0.9, 0.75)    
+    -- Create object
+    drinkInstance = Drink(drinkSprite, drinkWobbleAnimationLoop, drinkFillAmount, drinkStability)        
 
-    -- Modify sprite
+    -- Modify sprite and animation loop
     drinkInstance.sprite:setZIndex(-1)
     drinkInstance.sprite:setScale(startScale)
     drinkInstance.sprite:moveTo( 200, startY )
     drinkInstance.sprite:add()
+    drinkInstance.animationLoopWobble.paused = true -- Don't loop until wobble detected    
+    drinkInstance.sprite.update = function() -- Make sprite update function wobble loop animation
+        drinkInstance.sprite:setImage(drinkInstance.animationLoopWobble:image())
+        -- Optionally, removing the sprite when the animation finished
+        if not drinkInstance.animationLoopWobble:isValid() then
+            drinkInstance.sprite:remove()
+        end
+    end
 end
 
 function setUpTrack()
@@ -121,6 +138,13 @@ function getCrankTicks()
     return playdate.getCrankTicks(ticksPerRevolution)
 end
 
+function getCrankAcceleration()    
+    
+    local change, acceleratedChange = playdate.getCrankChange()
+
+    return acceleratedChange
+end
+
 function moveTrack(crankTicks)
      
     if drinkInstance == nil then
@@ -149,7 +173,7 @@ function moveTrack(crankTicks)
         end
 
          -- Decrease track length
-         trackInstance.length -= crankTicks / 1000
+         trackInstance.length -= crankTicks / absoluteTrackLength
 
           -- After track reaches 'horizon', begin moving drink towards screen
         if trackInstance.length < horizonPcnt then        
@@ -284,6 +308,45 @@ function swapTrack()
     end
 end
 
+function normalize(value, min, max)
+    return (value - min) / (max - min)
+end
+
+function checkSpill(crankAcceleration)
+    
+    if drinkInstance == nil then
+        error("drinkInstance is nil", 2)
+    end
+
+    -- For testing
+    if playdate.buttonIsPressed( playdate.kButtonB ) then
+        print("drink fill: ", drinkInstance.fillAmount)
+        print("drink stability: ", drinkInstance.stability)
+        print("drink spill threshold: ", drinkInstance.spillThreshold)
+    end
+
+    if crankAcceleration > 0 then
+        -- Max value can be derived from max crank change multiplied by acceleration formula
+        -- 359.9999 * (1.0 / (0.2 + math.pow(1.04, -math.abs(359.9999) + 20.0))))
+        -- But that is far too large (1799.985) in reality so is limited to half the max angle change
+        -- Negative values not used so minimum is 0
+        -- Normalized because spill threshold is between 0 and 1
+        -- https://devforum.play.date/t/acceleratedchange-in-c-sdk/6992/4
+        local normalizedAcceleration = normalize(crankAcceleration, 0, 180)
+
+        -- If acceleration greater than threshold then wobble
+        if normalizedAcceleration > drinkInstance.spillThreshold then
+            -- Make drink wobble
+            drinkInstance.animationLoopWobble.paused = false
+        else
+            -- Stop animation and revert to upright drink sprite
+            drinkInstance.animationLoopWobble.paused = true
+            drinkInstance.animationLoopWobble.frame = 1
+            drinkInstance.sprite:setImage(drinkInstance.animationLoopWobble:image())
+        end
+    end
+end
+
 function resetGame()    
     
     -- Reset drink
@@ -316,10 +379,15 @@ function playdate.update()
     --playdate.resetElapsedTime()
     
     -- Move track and drink based on polled crank input
-    crankTicks = getCrankTicks()    
+    crankTicks = getCrankTicks()
+    crankAcceleration = getCrankAcceleration()
+
     animateRoll(crankTicks)
     moveTrack(crankTicks)
     moveDrink(crankTicks)
+
+    checkSpill(crankAcceleration)
+
 
     -- Reset game
     if playdate.buttonIsPressed( playdate.kButtonA ) then

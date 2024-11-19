@@ -13,7 +13,11 @@
         "moveDrink",
         "swapTrack",
         "resetGame",
-        "myGameSetUp"],
+        "myGameSetUp",
+        "animateRoll",
+        "getCrankAcceleration",
+        "checkSpill",
+        "normalize"],
     "diagnostics.severity": {
         "duplicate-set-field": "Hint"
     },

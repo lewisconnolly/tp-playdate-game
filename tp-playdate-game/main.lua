@@ -71,18 +71,30 @@ end
 
 function setUpRoll()
 
-    -- Create sprite
-    local rollImage = gfx.image.new("Images/tprollStatic.png")
-    assert( rollImage ) -- Make sure image is where we thought
-    local rollSprite = gfx.sprite.new( rollImage )
-    
-    -- Creat object
-    rollInstance = Roll(rollSprite)
+    -- Create sprite and animation loop
+    local frameTime = 200 -- Each frame of the animation will last 200ms
+    local rollAnimationImagetable = gfx.imagetable.new("Images/tprollAnim")
+    assert( rollAnimationImagetable ) -- make sure the images were where we thought
+    -- Setting the last argument to false makes the animation stop on the last frame
+    local rollAnimationLoop = gfx.animation.loop.new(frameTime, rollAnimationImagetable, true)    
+    -- Set sprite image to first frame of the animation
+    local rollAnimatedSprite = gfx.sprite.new(rollAnimationLoop:image())    
 
-    -- Modify sprite
+    -- Create object
+    rollInstance = Roll(rollAnimatedSprite, rollAnimationLoop)
+
+    -- Modify sprite and animation loop
     rollInstance.sprite:setZIndex(3)
     rollInstance.sprite:moveTo( 200, 120 )
     rollInstance.sprite:add()
+    rollInstance.animationLoop.paused = true -- Don't loop until crank input detected    
+    rollInstance.sprite.update = function() -- Make sprite update function loop animation
+        rollInstance.sprite:setImage(rollInstance.animationLoop:image())
+        -- Optionally, removing the sprite when the animation finished
+        if not rollInstance.animationLoop:isValid() then
+            rollInstance.sprite:remove()
+        end
+    end
 end
 
 function setUpBackground()
@@ -216,6 +228,28 @@ function moveDrink(crankTicks)
     end
 end
 
+function animateRoll(crankTicks)
+    
+    if drinkInstance == nil then
+        error("drinkInstance is nil", 2)
+    end
+
+    if rollInstance == nil then
+        error("rollInstance is nil", 2)
+    end
+
+    -- Drink position variables
+    local drinkXPos, drinkYPos = drinkInstance.sprite:getPosition()
+    
+    if crankTicks >= 1 and drinkYPos < finishY then         
+        -- Play roll looping animation        
+        rollInstance.animationLoop.paused = false 
+    else
+         -- Stop roll looping animation        
+        rollInstance.animationLoop.paused = true
+    end
+end
+
 function swapTrack()        
         
     local frameTime = 200 -- Each frame of the animation will last 200ms
@@ -283,6 +317,7 @@ function playdate.update()
     
     -- Move track and drink based on polled crank input
     crankTicks = getCrankTicks()    
+    animateRoll(crankTicks)
     moveTrack(crankTicks)
     moveDrink(crankTicks)
 

@@ -1,6 +1,19 @@
 {
     "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
-    "diagnostics.globals": ["import"],
+    "diagnostics.globals": ["import",
+        "Drink",
+        "setUpDrink",
+        "setUpTrack",
+        "Track",
+        "Roll",
+        "setUpRoll",
+        "setUpBackground",
+        "getCrankTicks",
+        "moveTrack",
+        "moveDrink",
+        "swapTrack",
+        "resetGame",
+        "myGameSetUp"],
     "diagnostics.severity": {
         "duplicate-set-field": "Hint"
     },

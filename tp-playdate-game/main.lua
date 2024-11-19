@@ -23,8 +23,6 @@ local drinkInstance = nil
 local trackInstance = nil
 local rollInstance = nil
 
-
-
 function setUpDrink()
     
     -- Create sprite
@@ -66,7 +64,7 @@ function setUpTrack()
         trackInstance.sprite:setImage(trackInstance.animationLoop:image())
         -- Optionally, removing the sprite when the animation finished
         if not trackInstance.animationLoop:isValid() then
-            trackInstance.animationLoop:remove()
+            trackInstance.sprite:remove()
         end
     end
 end
@@ -107,13 +105,20 @@ function getCrankTicks()
     
     -- Crank input variables
     local ticksPerRevolution = 360
-    local crankTicks = playdate.getCrankTicks(ticksPerRevolution)
     
-    return crankTicks
+    return playdate.getCrankTicks(ticksPerRevolution)
 end
 
 function moveTrack(crankTicks)
      
+    if drinkInstance == nil then
+        error("drinkInstance is nil", 2)
+    end
+
+    if trackInstance == nil then
+        error("trackInstance is nil", 2)
+    end
+
     -- Drink position variables
      local drinkXPos, drinkYPos = drinkInstance.sprite:getPosition()
     
@@ -136,7 +141,7 @@ function moveTrack(crankTicks)
 
           -- After track reaches 'horizon', begin moving drink towards screen
         if trackInstance.length < horizonPcnt then        
-            -- Swap from looping animation to components animation
+            -- Swap from looping animation to segmented animation
             if trackInstance.isLongTrack then
                 swapTrack()
                 drinkInstance.sprite:setZIndex(2)
@@ -146,7 +151,7 @@ function moveTrack(crankTicks)
             -- Change frame of track animation based on percentage of track remaining
             pcntAlongVisibleTrack = 1.0 - (trackInstance.length / horizonPcnt)
             -- endFrame returns total frames
-            -- Add lag to track animation based on percentage of track travelled to stop paper outpacing drink
+            -- Add lag to track animation based on percentage of track travelled to stop track outpacing drink
             matchingAnimFrame = math.floor(pcntAlongVisibleTrack * trackInstance.animationLoop.endFrame) - math.ceil(pcntAlongVisibleTrack * 10) 
             trackInstance.animationLoop.frame = math.max(0, matchingAnimFrame)
             trackInstance.sprite:setImage(trackInstance.animationLoop:image())
@@ -161,6 +166,14 @@ end
 
 function moveDrink(crankTicks)
     
+    if drinkInstance == nil then
+        error("drinkInstance is nil", 2)
+    end
+
+    if trackInstance == nil then
+        error("trackInstance is nil", 2)
+    end
+
     -- Drink position variables
     local drinkXPos, drinkYPos = drinkInstance.sprite:getPosition()
     local targetScale = 0
@@ -178,7 +191,7 @@ function moveDrink(crankTicks)
         -- After track reaches 'horizon', begin moving drink towards screen
         if trackInstance.length < horizonPcnt then        
             
-            -- After passing horizon, move drink by the percentage of track that has passed the horizon point towards the finish y-position
+            -- After passing horizon, move drink by the percentage of track that has passed the horizon point towards the finish line
             drinkXPos, drinkYPos = drinkInstance.sprite:getPosition()                     
             baseTargetPos = startY + (1.0 - (trackInstance.length / horizonPcnt)) * (finishY - startY)
             
@@ -190,7 +203,8 @@ function moveDrink(crankTicks)
             -- Increase position by base target + difference
             finalDrinkTargetPos =  baseTargetPos + differenceFromPrevFrame
             distToMove = finalDrinkTargetPos - drinkYPos
-
+            
+            -- If distance to move is negative or past the finish line then move to finish line
             if (distToMove >= 0 and drinkYPos + distToMove <= finishY) then
                 drinkInstance.sprite:moveBy( 0, distToMove ) 
             else
@@ -202,38 +216,50 @@ function moveDrink(crankTicks)
     end
 end
 
-function swapTrack()
-    trackInstance.sprite:remove()
-    
-    -- Each frame of the animation will last 200ms
-    local frameTime = 200
+function swapTrack()        
+        
+    local frameTime = 200 -- Each frame of the animation will last 200ms
     local trackAnimationImagetable = gfx.imagetable.new("Images/tpLineAnim")
     assert( trackAnimationImagetable ) -- make sure the images were where we thought
     -- Setting the last argument to false makes the animation stop on the last frame
     local trackAnimationLoop = gfx.animation.loop.new(frameTime, trackAnimationImagetable, false)
-    trackAnimationLoop.paused = true
+    trackAnimationLoop.paused = true -- Animation should not loop automatically
     -- Set sprite image to first frame of the animation
     local trackAnimatedSprite = gfx.sprite.new(trackAnimationLoop:image())
-    trackAnimatedSprite:setZIndex(1)
-
-    -- Move track sprite to scren position
-    trackAnimatedSprite:moveTo( 200, 120 )
-    -- Add sprite to display list
-    trackAnimatedSprite:add()
-
-    trackAnimatedSprite.update = function()
-        trackAnimatedSprite:setImage(trackAnimationLoop:image())
-        -- Optionally, removing the sprite when the animation finished
-        if not trackAnimationLoop:isValid() then
-            trackAnimatedSprite:remove()
-        end
-    end
     
-    trackInstance.sprite = trackAnimatedSprite
-    trackInstance.animationLoop = trackAnimationLoop
+    if trackInstance ~= nil then
+        
+        -- Update track object        
+        trackInstance.sprite:remove() -- Remove sprite from looping animation
+        trackInstance.sprite = trackAnimatedSprite
+        trackInstance.animationLoop = trackAnimationLoop
+        
+        -- Modify sprite
+        trackInstance.sprite:setZIndex(1)
+        trackInstance.sprite:moveTo( 200, 120 )
+        trackInstance.sprite:add()    
+        trackInstance.sprite.update = function() -- Make sprite update function loop animation
+            trackInstance.sprite:setImage(trackInstance.animationLoop:image())
+            -- Optionally, removing the sprite when the animation finished
+            if not trackInstance.animationLoop:isValid() then
+                trackInstance.sprite:remove()
+            end
+        end
+    else
+        error("trackInstance is nil", 2)
+    end
 end
 
-function resetGame()
+function resetGame()    
+    
+    -- Reset drink
+    if drinkInstance ~= nil then drinkInstance.sprite:remove() end
+    finalDrinkTargetPos = 0
+    -- Reset track
+    if trackInstance ~= nil then trackInstance.sprite:remove() end
+    -- Reset roll
+    if rollInstance ~= nil then rollInstance.sprite:remove() end
+        
     myGameSetUp()
 end
 
@@ -261,7 +287,7 @@ function playdate.update()
     moveDrink(crankTicks)
 
     -- Reset game
-    if playdate.buttonIsPressed( playdate.AButtonUp ) then
+    if playdate.buttonIsPressed( playdate.kButtonA ) then
         resetGame()
     end
 

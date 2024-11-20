@@ -17,7 +17,8 @@
         "animateRoll",
         "getCrankAcceleration",
         "checkSpill",
-        "normalize"],
+        "normalize",
+        "stopAnimation"],
     "diagnostics.severity": {
         "duplicate-set-field": "Hint"
     },

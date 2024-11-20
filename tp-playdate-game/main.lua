@@ -23,6 +23,9 @@ local crankAcceleration = 0 -- Store crank acceleration
 -- Game properties
 local drinkFillAmount = 0.9
 local drinkStability = 0.5
+local trackStrength = 0.5
+local trackRoughness = 0.25
+local trackAbsorbency = 0.5
 
 -- Game objects
 local drinkInstance = nil
@@ -32,7 +35,7 @@ local rollInstance = nil
 function setUpDrink()
     
     -- Create sprite and animation loop
-    local wobbleFrameTime = 500 -- Each frame of the animation will last 500ms
+    local wobbleFrameTime = 330 -- Each frame of the animation will last 500ms
     local drinkWobbleAnimationImagetable = gfx.imagetable.new("Images/glassWobbleAnim")
     assert( drinkWobbleAnimationImagetable ) -- make sure the images were where we thought
     -- Setting the last argument to false makes the animation stop on the last frame
@@ -70,7 +73,7 @@ function setUpTrack()
     local trackAnimatedSprite = gfx.sprite.new(trackAnimationLoop:image())    
 
     -- Create object
-    trackInstance = Track(trackAnimatedSprite, trackAnimationLoop, 0.5, 0.25, 0.5)
+    trackInstance = Track(trackAnimatedSprite, trackAnimationLoop, trackStrength, trackRoughness, trackAbsorbency)
 
     -- Modify sprite and animation loop
     trackInstance.sprite:setZIndex(1)
@@ -318,11 +321,15 @@ function checkSpill(crankAcceleration)
         error("drinkInstance is nil", 2)
     end
 
-    -- For testing
-    if playdate.buttonIsPressed( playdate.kButtonB ) then
-        print("drink fill: ", drinkInstance.fillAmount)
-        print("drink stability: ", drinkInstance.stability)
-        print("drink spill threshold: ", drinkInstance.spillThreshold)
+    local delay = 0
+    local animationTimer
+
+    function stopWobbleAnimation()
+            
+        -- Stop animation and set to upright frame
+        drinkInstance.animationLoopWobble.paused = true
+        drinkInstance.animationLoopWobble.frame = 1
+        drinkInstance.sprite:setImage(drinkInstance.animationLoopWobble:image())
     end
 
     if crankAcceleration > 0 then
@@ -334,15 +341,15 @@ function checkSpill(crankAcceleration)
         -- https://devforum.play.date/t/acceleratedchange-in-c-sdk/6992/4
         local normalizedAcceleration = normalize(crankAcceleration, 0, 180)
 
-        -- If acceleration greater than threshold then wobble
+        -- If acceleration greater than threshold then wobble drink
         if normalizedAcceleration > drinkInstance.spillThreshold then
-            -- Make drink wobble
-            drinkInstance.animationLoopWobble.paused = false
-        else
-            -- Stop animation and revert to upright drink sprite
-            drinkInstance.animationLoopWobble.paused = true
-            drinkInstance.animationLoopWobble.frame = 1
-            drinkInstance.sprite:setImage(drinkInstance.animationLoopWobble:image())
+            -- Create timer to play all frames of animation
+            delay = drinkInstance.animationLoopWobble.delay * -- frame time * num frames + extra frame of lag
+                    drinkInstance.animationLoopWobble.endFrame +
+                    drinkInstance.animationLoopWobble.delay 
+            if animationTimer ~= nil then animationTimer:reset() -- Reset timer if already created
+            else animationTimer = playdate.timer.performAfterDelay(delay, stopWobbleAnimation) end -- Create timer
+            if drinkInstance.animationLoopWobble.paused then drinkInstance.animationLoopWobble.paused = false end -- Play animation
         end
     end
 end

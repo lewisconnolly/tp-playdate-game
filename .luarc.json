@@ -18,7 +18,10 @@
         "getCrankAcceleration",
         "checkSpill",
         "normalize",
-        "stopAnimation"],
+        "stopAnimation",
+        "stopWobbleAnimation",
+        "gameObjectsSetUp",
+        "getCrankInput"],
     "diagnostics.severity": {
         "duplicate-set-field": "Hint"
     },

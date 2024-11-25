@@ -72,7 +72,6 @@ function Track:move(crankTicks, drinkInstance, absoluteTrackLength, horizonPcnt)
             -- Swap from looping animation to segmented animation
             if self.isLongTrack then
                 self:swap()
-                drinkInstance.sprite:setZIndex(2)
                 self.isLongTrack = false
             end
             

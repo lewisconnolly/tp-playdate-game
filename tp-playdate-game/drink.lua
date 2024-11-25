@@ -6,6 +6,7 @@ function Drink:init(fillAmount, stability, startScale, finishScale, startY, fini
     Drink.super.init(self)  
     self.sprite = nil
     self.animationLoopWobble = nil
+    self.dropletSprites = { }
     self.fillAmount = fillAmount
     self.stability = stability
     self.startScale = startScale
@@ -28,9 +29,15 @@ function Drink:setUp()
     -- Set sprite image to first frame of the animation
     local drinkSprite = gfx.sprite.new(drinkWobbleAnimationLoop:image())    
 
+    -- Create droplet sprites
+    local droplet1 = gfx.image.new("Images/waterdrop01.png")
+    local droplet2 = gfx.image.new("Images/waterdrop02.png")
+    local dropletSprites = { gfx.sprite.new(droplet1), gfx.sprite.new(droplet2) }
+
     -- Create object    
     self.sprite = drinkSprite
     self.animationLoopWobble = drinkWobbleAnimationLoop
+    self.dropletSprites = dropletSprites
 
     -- Modify sprite and animation loop
     self.sprite:setZIndex(-1)
@@ -55,6 +62,11 @@ function Drink:move(crankTicks, trackInstance, horizonPcnt)
     local baseTargetPos = 0
     local distToMove = 0
     local differenceFromPrevFrame = 0
+
+    -- Move drink in front of track if past horizon point
+    if not trackInstance.isLongTrack then
+        self.sprite:setZIndex(2)
+    end
 
     -- If crank has been turned and drink is not at the finish line
     if crankTicks >= 1 and drinkYPos < self.finishY then        
@@ -91,7 +103,7 @@ function Drink:move(crankTicks, trackInstance, horizonPcnt)
     end
 end
 
-function Drink:checkSpill(crankAcceleration, crankAcceleration1)
+function Drink:checkSpill(crankAccelSmpl1, crankAccelSmpl2)
     
     -- Only check spill if not at finish line
     local drinkXPos, drinkYPos = self.sprite:getPosition()
@@ -112,7 +124,7 @@ function Drink:checkSpill(crankAcceleration, crankAcceleration1)
     end
 
     -- Calculate jerk (difference in acceleration between frames) to handle acceleration and deceleration
-    local jerk = math.abs(crankAcceleration - crankAcceleration1)
+    local jerk = math.abs(crankAccelSmpl1 - crankAccelSmpl2)
 
     if jerk > 0 then
         -- Max value can be derived from max crank change multiplied by acceleration formula
@@ -121,10 +133,10 @@ function Drink:checkSpill(crankAcceleration, crankAcceleration1)
         -- Negative values not used so minimum is 0
         -- Normalized because spill threshold is between 0 and 1
         -- https://devforum.play.date/t/acceleratedchange-in-c-sdk/6992/4
-        local normalizedAcceleration = GLOBALS.normalize(jerk, 0, 180)
+        local normalizedJerk = GLOBALS.normalize(jerk, 0, 180)
 
         -- If acceleration greater than threshold then wobble drink
-        if normalizedAcceleration > self.spillThreshold then
+        if normalizedJerk > self.spillThreshold then
             -- Create timer to play all frames of animation
             delay = self.animationLoopWobble.delay * -- frame time * num frames + extra frame of lag
                     self.animationLoopWobble.endFrame +
@@ -132,6 +144,22 @@ function Drink:checkSpill(crankAcceleration, crankAcceleration1)
             if animationTimer ~= nil then animationTimer:reset() -- Reset timer if already created
             else animationTimer = playdate.timer.performAfterDelay(delay, stopWobbleAnimation) end -- Create timer
             if self.animationLoopWobble.paused then self.animationLoopWobble.paused = false end -- Play animation
+
+            self:createSpill()
         end
     end
+end
+
+function Drink:createSpill()
+    
+    local drinkXPos, drinkYPos = self.sprite:getPosition()    
+    
+    local arc = playdate.geometry.arc.new(drinkXPos, drinkYPos, 5, 0, 90, true)
+
+    local point = arc:pointOnArc(2, true)
+
+    self.dropletSprites[1]:setZIndex(3)
+    self.dropletSprites[1]:setScale(1.0)
+    self.dropletSprites[1]:moveTo( point.x, point.y )
+    self.dropletSprites[1]:add()
 end

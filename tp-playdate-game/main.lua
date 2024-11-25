@@ -25,9 +25,9 @@ local trackRoughness = 0.25
 local trackAbsorbency = 0.5
 
 -- Game objects
-local drinkInstance = nil
-local trackInstance = nil
-local rollInstance = nil
+local drink = nil
+local track = nil
+local roll = nil
 
 function setUpBackground()
     
@@ -75,16 +75,16 @@ end
 function gameObjectsSetUp()
     
     -- Drink
-    drinkInstance = Drink(drinkFillAmount, drinkStability, drinkStartScale, drinkFinishScale, drinkStartY, drinkFinishY, finalDrinkTargetPos)
-    drinkInstance:setUp()
+    drink = Drink(drinkFillAmount, drinkStability, drinkStartScale, drinkFinishScale, drinkStartY, drinkFinishY, finalDrinkTargetPos)
+    drink:setUp()
 
     -- Track
-    trackInstance = Track(trackStrength, trackRoughness, trackAbsorbency)
-    trackInstance:setUp()
+    track = Track(trackStrength, trackRoughness, trackAbsorbency)
+    track:setUp()
 
     -- Roll
-    rollInstance = Roll()
-    rollInstance:setUp()
+    roll = Roll()
+    roll:setUp()
 
 end
 
@@ -104,16 +104,16 @@ myGameSetUp()
 -- Called by the OS 30 times every second, runs game logic and moves sprites
 function playdate.update()
     
-    if drinkInstance == nil then
-        error("drinkInstance is nil", 2)
+    if drink == nil then
+        error("drink object is nil", 2)
     end
 
-    if trackInstance == nil then
-        error("trackInstance is nil", 2)
+    if track == nil then
+        error("track object is nil", 2)
     end
 
-    if rollInstance == nil then
-        error("rollInstance is nil", 2)
+    if roll == nil then
+        error("roll object is nil", 2)
     end
     
     -- Get time since last freme
@@ -122,10 +122,10 @@ function playdate.update()
     
     -- Move track and drink based on polled crank input
     crankTicks, crankAccelStartOfFrame = getCrankInput()
-    rollInstance:animate(crankTicks, drinkInstance)
-    trackInstance:move(crankTicks, drinkInstance, absoluteTrackLength, horizonPcnt)    
-    drinkInstance:move(crankTicks, trackInstance, horizonPcnt)
-    drinkInstance:checkSpill(crankAccelStartOfFrame, crankAccelEndOfFrame)
+    roll:animate(crankTicks, drink)
+    track:move(crankTicks, drink, absoluteTrackLength, horizonPcnt)    
+    drink:move(crankTicks, track, horizonPcnt)
+    drink:checkSpill(crankAccelStartOfFrame, crankAccelEndOfFrame)
 
     -- Measure acceleration twice to calculate change in acceleration between frames    
     crankAccelEndOfFrame = getCrankAcceleration()

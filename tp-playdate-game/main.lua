@@ -14,7 +14,8 @@ local drinkFinishScale = 2.0 -- Scale of drink at finish line
 local drinkStartScale = 0.5 -- Scale of drink at starting position
 local finalDrinkTargetPos = 0 -- The target position of the drink based on crank input at the end of each frame
 local crankTicks = 0 -- Store crank ticks
-local crankAcceleration = 0 -- Store crank acceleration
+local crankAccelStartOfFrame = 0 -- Store crank acceleration
+local crankAccelEndOfFrame = 0 -- Store crank acceleration
 
 -- Game properties
 local drinkFillAmount = 0.9
@@ -120,11 +121,14 @@ function playdate.update()
     --playdate.resetElapsedTime()
     
     -- Move track and drink based on polled crank input
-    crankTicks, crankAcceleration = getCrankInput()
+    crankTicks, crankAccelStartOfFrame = getCrankInput()
     rollInstance:animate(crankTicks, drinkInstance)
     trackInstance:move(crankTicks, drinkInstance, absoluteTrackLength, horizonPcnt)    
     drinkInstance:move(crankTicks, trackInstance, horizonPcnt)
-    drinkInstance:checkSpill(crankAcceleration)
+    drinkInstance:checkSpill(crankAccelStartOfFrame, crankAccelEndOfFrame)
+
+    -- Measure acceleration twice to calculate change in acceleration between frames    
+    crankAccelEndOfFrame = getCrankAcceleration()
 
     -- Reset game
     if playdate.buttonIsPressed( playdate.kButtonA ) then

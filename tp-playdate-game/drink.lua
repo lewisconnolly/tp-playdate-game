@@ -91,7 +91,7 @@ function Drink:move(crankTicks, trackInstance, horizonPcnt)
     end
 end
 
-function Drink:checkSpill(crankAcceleration)
+function Drink:checkSpill(crankAcceleration, crankAcceleration1)
     
     -- Only check spill if not at finish line
     local drinkXPos, drinkYPos = self.sprite:getPosition()
@@ -111,14 +111,17 @@ function Drink:checkSpill(crankAcceleration)
         self.sprite:setImage(self.animationLoopWobble:image())
     end
 
-    if crankAcceleration > 0 then
+    -- Calculate jerk (difference in acceleration between frames) to handle acceleration and deceleration
+    local jerk = math.abs(crankAcceleration - crankAcceleration1)
+
+    if jerk > 0 then
         -- Max value can be derived from max crank change multiplied by acceleration formula
         -- 359.9999 * (1.0 / (0.2 + math.pow(1.04, -math.abs(359.9999) + 20.0))))
         -- But that is far too large (1799.985) in reality so is limited to half the max angle change
         -- Negative values not used so minimum is 0
         -- Normalized because spill threshold is between 0 and 1
         -- https://devforum.play.date/t/acceleratedchange-in-c-sdk/6992/4
-        local normalizedAcceleration = GLOBALS.normalize(crankAcceleration, 0, 180)
+        local normalizedAcceleration = GLOBALS.normalize(jerk, 0, 180)
 
         -- If acceleration greater than threshold then wobble drink
         if normalizedAcceleration > self.spillThreshold then

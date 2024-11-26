@@ -62,13 +62,9 @@ end
 
 function resetGame()    
     
-    -- Reset drink
-    if drink ~= nil then drink.sprite:remove() end
-    -- Reset track
-    if track ~= nil then track.sprite:remove() end
-    -- Reset roll
-    if roll ~= nil then roll.sprite:remove() end
-        
+    -- Remove all sprites
+    gfx.sprite.removeAll()
+
     myGameSetUp()
 end
 

@@ -152,9 +152,16 @@ end
 
 function Drink:createSpill()
     
-    local drinkXPos, drinkYPos = self.sprite:getPosition()    
+    local Animator = playdate.graphics.animator
+
+    local animators = {}
     
+    local drinkXPos, drinkYPos = self.sprite:getPosition()
     local arc = playdate.geometry.arc.new(drinkXPos, drinkYPos, 5, 0, 90, true)
+    local startPoint = arc:pointOnArc(0, false)
+    local endPoint = arc:pointOnArc(20, false)
+    
+    
 
     local point = arc:pointOnArc(2, true)
 

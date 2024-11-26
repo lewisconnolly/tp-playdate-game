@@ -63,11 +63,11 @@ end
 function resetGame()    
     
     -- Reset drink
-    if drinkInstance ~= nil then drinkInstance.sprite:remove() end
+    if drink ~= nil then drink.sprite:remove() end
     -- Reset track
-    if trackInstance ~= nil then trackInstance.sprite:remove() end
+    if track ~= nil then track.sprite:remove() end
     -- Reset roll
-    if rollInstance ~= nil then rollInstance.sprite:remove() end
+    if roll ~= nil then roll.sprite:remove() end
         
     myGameSetUp()
 end

@@ -6,7 +6,8 @@ import "CoreLibs/graphics"
 import "CoreLibs/animation"
 import "CoreLibs/sprites"
 import "CoreLibs/timer"
-import "CoreLibs/crank"    
+import "CoreLibs/crank"
+import "CoreLibs/easing"
 
 -- Global references
 M.gfx = playdate.graphics

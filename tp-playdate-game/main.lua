@@ -126,6 +126,9 @@ function playdate.update()
     -- Measure acceleration twice to calculate change in acceleration between frames    
     crankAccelEndOfFrame = getCrankAcceleration()
 
+    -- Dry/fade droplets each frame
+    drink:dryDroplets()
+    
     -- Reset game
     if playdate.buttonIsPressed( playdate.kButtonA ) then
         resetGame()

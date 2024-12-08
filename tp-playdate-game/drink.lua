@@ -177,49 +177,56 @@ function Drink:createDroplets()
     if animatorsEnded then                
         self.dropletAnimators = {}        
         local numDroplets = math.random(5)
-        local drinkXPos, drinkYPos = self.sprite:getPosition()
-        local drinkXScale, drinkYScale = self.sprite:getScale()
-        local spawnPoint = {}
-        local arcEndAngle = 0
-        local drinkWidth = 45
-        local startX = 0
-        local arcRadius = 0
+        local drinkSpriteXPos, drinkSpriteYPos = self.sprite:getPosition()
+        local drinkSpriteXScale, drinkSpriteYScale = self.sprite:getScale()
+        local drinkSpriteWidth, drinkSpriteHeight = self.sprite:getSize()
+        local dropletSpawnPoint = {}
+        local dropletArcEndAngle = 0
+        local origDrinkWidth = 45
+        --local origDrinkHeight = 64
+        local dropletBaseSpawnX = 0
+        local dropletArcRadius = 0
         local clockwise = false
+        local dropletSpawnYOffset = 0
+        local dropletScaleModifier = 0.0
 
-        for i = numDroplets, 0, -1 do            
-            startX = drinkXPos - drinkWidth / 2 + drinkWidth / numDroplets * (numDroplets - i - 1)
-            spawnPoint.x = startX + math.random(0, math.floor(drinkWidth / numDroplets))
-            spawnPoint.y = drinkYPos - drinkWidth / 2 * drinkXScale
-            --arcRadius = math.random(200)
-            arcRadius = drinkWidth
+        for i = numDroplets, 0, -1 do
+            dropletArcRadius = origDrinkWidth * drinkSpriteXScale + math.random(0, math.floor(drinkSpriteWidth / 4))
+            dropletBaseSpawnX = drinkSpriteXPos - origDrinkWidth / 2 + origDrinkWidth / numDroplets * (numDroplets - i - 1)
+            dropletSpawnPoint.x = dropletBaseSpawnX + math.random(0, math.floor(origDrinkWidth / numDroplets))
+            dropletSpawnYOffset = -(drinkSpriteHeight / 2) + dropletArcRadius    
+            dropletSpawnPoint.y = drinkSpriteYPos + dropletSpawnYOffset
+            dropletScaleModifier = math.random()            
+            
             if math.random(0, 1) == 0 then clockwise = false else clockwise = true end
             
             if clockwise then
-                arcEndAngle = math.random(90, 160) 
+                dropletArcEndAngle = math.random(100, 125) 
             else
-                arcEndAngle = math.random(200, 270)
+                dropletArcEndAngle = math.random(200, 245)
             end
             
-            self:createDroplet(spawnPoint, arcRadius, arcEndAngle, clockwise)
-           
-            -- local spawnMarkerImg = gfx.image.new("Images/drinkImage.png")
-            -- local spawnMarkerSprite = gfx.sprite.new(spawnMarkerImg)
-            -- spawnMarkerSprite:setZIndex(3)
-            -- spawnMarkerSprite:moveTo( spawnPoint.x, spawnPoint.y )
-            -- spawnMarkerSprite:add()
+            self:createDroplet(dropletSpawnPoint, dropletArcRadius, dropletArcEndAngle, clockwise, dropletScaleModifier)
         end
 
         
     end
 end
 
-function Drink:createDroplet(spawnPoint, arcRadius, arcEndAngle, clockwise)
-
+function Drink:createDroplet(spawnPoint, arcRadius, arcEndAngle, clockwise, dropletScaleModifier)
+    
     local arc = playdate.geometry.arc.new(spawnPoint.x, spawnPoint.y, arcRadius, 0, arcEndAngle, clockwise)
+    local arcEndpoint = arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint
+    local drinkSpriteXScale, drinkSpriteYScale = self.sprite:getScale()
+    
+    print(arcEndpoint.x, " ", arcEndpoint.y)
+    if (arcEndpoint.y < 70) then
+        arc = playdate.geometry.arc.new(spawnPoint.x, spawnPoint.y + 70 - arcEndpoint.y, arcRadius, 0, arcEndAngle, clockwise)
+    end
 
     local dropletScaleX, dropletScaleY = self.sprite:getScale()
-    dropletScaleX = dropletScaleX / 2
-    dropletScaleY = dropletScaleY / 2
+    dropletScaleX = dropletScaleX * drinkSpriteXScale * dropletScaleModifier
+    dropletScaleY = dropletScaleY * drinkSpriteXScale * dropletScaleModifier
     
     local dropletAnimator = playdate.graphics.animator.new(1000, arc, playdate.easingFunctions.linear)
     dropletAnimator.repeatCount = 0

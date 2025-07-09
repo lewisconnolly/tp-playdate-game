@@ -14,11 +14,8 @@ function Track:init(strength, roughness, absorbency)
     self.wetness = 0.001 -- Track starts dry
     self.tearThreshold = strength * (1 / self.wetness) -- Inversely proportional to wetness (wetter = easier to tear)
     self.slipThreshold = roughness * self.wetness -- Proportional to turgidity (wetter = harder to slip)
-end
 
-function Track:setUp()
-
-    -- Create sprite and animation loop
+     -- Create sprite and animation loop
     local frameTime = 200 -- Each frame of the animation will last 200ms
     local trackAnimationImagetable = gfx.imagetable.new("Images/tpLine")
     assert( trackAnimationImagetable ) -- make sure the images were where we thought

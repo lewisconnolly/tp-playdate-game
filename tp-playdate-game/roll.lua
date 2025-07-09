@@ -6,9 +6,6 @@ function Roll:init()
     Roll.super.init(self)
     self.sprite = nil
     self.animationLoop = nil
-end
-
-function Roll:setUp()
 
     -- Create sprite and animation loop
     local frameTime = 200 -- Each frame of the animation will last 200ms

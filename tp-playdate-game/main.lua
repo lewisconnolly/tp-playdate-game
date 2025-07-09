@@ -74,21 +74,19 @@ function gameObjectsSetUp()
     
     --Droplets system
     dropletsSystem = DropletsSystem()
-    dropletsSystem:setUp()
     
+    if dropletsSystem == nil then
+        error("droplets system object is nil", 2)
+    end
+
     -- Drink
-    drink = Drink(drinkFillAmount, drinkStability, drinkStartScale, drinkFinishScale, drinkStartY, drinkFinishY, finalDrinkTargetPos)
-    drink:setUp(dropletsSystem)
+    drink = Drink(drinkFillAmount, drinkStability, drinkStartScale, drinkFinishScale, drinkStartY, drinkFinishY, finalDrinkTargetPos, dropletsSystem)
 
     -- Track
     track = Track(trackStrength, trackRoughness, trackAbsorbency)
-    track:setUp()
 
     -- Roll
     roll = Roll()
-    roll:setUp()
-
-    
 
 end
 
@@ -107,11 +105,7 @@ myGameSetUp()
 
 -- Called by the OS 30 times every second, runs game logic and moves sprites
 function playdate.update()
-    
-    if dropletsSystem == nil then
-        error("droplets system object is nil", 2)
-    end
-    
+        
     if drink == nil then
         error("drink object is nil", 2)
     end
@@ -139,7 +133,6 @@ function playdate.update()
     crankAccelEndOfFrame = getCrankAcceleration()
 
     -- Dry/fade droplets each frame
-    --drink:dryDroplets()
     drink:getDropletsSystem():dryDroplets()
     
     -- Reset game

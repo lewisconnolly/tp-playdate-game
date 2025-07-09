@@ -9,16 +9,11 @@ function DropletsSystem:init()
     self.dropletSprites = {}
     self.droplets = {}    
     self.activeDroplets = {}
-    --self.dropletAnimators = {}
-end
 
-function DropletsSystem:setUp()   
-    
     -- Load droplet images
     local droplet1 = gfx.image.new("Images/waterdrop01.png")
     local droplet2 = gfx.image.new("Images/waterdrop02.png")
     self.dropletSprites = { gfx.sprite.new(droplet1), gfx.sprite.new(droplet2) }    
-
 end
 
 function DropletsSystem:getDroplets()
@@ -55,8 +50,9 @@ function DropletsSystem:createDroplet(
     -- Set spawn point y position to be at the mouth of the glass, at the centre of the circle described by the arc radius        
     dropletSpawnYOffset = -(drinkSpriteHeight / 2) + dropletArcRadius    
     dropletSpawnPoint.y = drinkSpriteYPos + dropletSpawnYOffset
-    -- Randomise size of droplets but more jerk should mean larger droplets
-    dropletScaleModifier = math.random() * normalizedJerk
+    -- Scale modifier between 0.5 and 1.0, with more jerk leading to larger droplets;
+    dropletScaleModifier = 1 - math.cos((normalizedJerk * math.pi) / 2) * (math.random())    
+    print ("Droplet scale modifier: " .. dropletScaleModifier)
                 
     -- Randomise direction droplet arc will take
     if math.random(0, 1) == 0 then clockwise = false else clockwise = true end
@@ -67,6 +63,10 @@ function DropletsSystem:createDroplet(
     else
         dropletArcEndAngle = math.random(200, 245)
     end
+
+    -- Scale droplet based on current drink scale and random modifier    
+    local dropletXScale = drinkSpriteXScale * dropletScaleModifier
+    local dropletYScale = drinkSpriteYScale * dropletScaleModifier
     
     -- Create new droplet
     local dropletSprite = gfx.sprite.new()
@@ -78,16 +78,63 @@ function DropletsSystem:createDroplet(
         dropletArcRadius,
         dropletArcEndAngle,
         clockwise,
-        dropletScaleModifier
+        dropletXScale,
+        dropletYScale
     )
 
     if droplet == nil then
         error("droplet object is nil", 2)
     end
-
-    droplet:setUp(drinkSpriteXScale, drinkSpriteYScale)    
+    
+    -- Track new droplet
     self.droplets[#self.droplets+1] = droplet
-    self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet:getSprite(), arc = droplet:getArc()}    
+    self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet:getSprite(), arc = droplet:getArc()}
+
+    -- Create same number of small droplets as the main droplet    
+    self:createSmallDroplet(dropletSpawnPoint, dropletXScale, dropletYScale)
+
+end
+
+function DropletsSystem:createSmallDroplet(parentSpawnPoint, parentXScale, parentYScale)
+    
+    local dropletArcEndAngle = 0
+    local dropletArcRadius = 0
+    local clockwise = false
+
+    -- Arc radius based on parent scale
+    dropletArcRadius = parentXScale + math.random(0, math.floor(45 / 4))
+    -- Randomise direction droplet arc will take
+    if math.random(0, 1) == 0 then clockwise = false else clockwise = true end
+    
+    -- Choose where droplet will land based on direction of arc and segements of circle described by angles
+    if clockwise then
+        dropletArcEndAngle = math.random(100, 125) 
+    else
+        dropletArcEndAngle = math.random(200, 245)
+    end
+    
+    -- Create new droplet using smaller sprite
+    local dropletSprite = gfx.sprite.new()
+    dropletSprite:setImage(self.dropletSprites[2]:getImage())
+
+    local droplet = Droplet(
+        dropletSprite,    
+        parentSpawnPoint,
+        dropletArcRadius,
+        dropletArcEndAngle,
+        clockwise,
+        parentXScale,
+        parentYScale
+    )
+
+    if droplet == nil then
+        error("small droplet object is nil", 2)
+    end
+
+    -- Track small droplets
+    self.droplets[#self.droplets+1] = droplet
+    self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet:getSprite(), arc = droplet:getArc()}
+
 end
 
 function DropletsSystem:dryDroplets()

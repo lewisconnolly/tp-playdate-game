@@ -21,7 +21,9 @@
         "stopAnimation",
         "stopWobbleAnimation",
         "gameObjectsSetUp",
-        "getCrankInput"],
+        "getCrankInput",
+        "DropletsSystem",
+        "Droplet"],
     "diagnostics.severity": {
         "duplicate-set-field": "Hint"
     },

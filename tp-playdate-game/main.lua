@@ -127,7 +127,8 @@ function playdate.update()
     crankAccelEndOfFrame = getCrankAcceleration()
 
     -- Dry/fade droplets each frame
-    drink:dryDroplets()
+    --drink:dryDroplets()
+    drink.dropletsSystem:dryDroplets()
     
     -- Reset game
     if playdate.buttonIsPressed( playdate.kButtonA ) then

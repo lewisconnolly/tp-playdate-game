@@ -1,3 +1,5 @@
+import "dropletsSystem"
+
 local gfx <const> = GLOBALS.gfx
 
 class('Drink').extends()
@@ -6,9 +8,12 @@ function Drink:init(fillAmount, stability, startScale, finishScale, startY, fini
     Drink.super.init(self)  
     self.sprite = nil
     self.animationLoopWobble = nil
-    self.dropletSprites = {}
-    self.dropletAnimators = {}
-    self.activeDroplets = {}
+    self.dropletsSystem = nil
+    self.origDrinkWidth = 45
+    self.origDrinkHeight = 64
+    -- self.dropletSprites = {} 
+    -- self.dropletAnimators = {}
+    -- self.activeDroplets = {}
     self.fillAmount = fillAmount
     self.stability = stability
     self.startScale = startScale
@@ -31,15 +36,17 @@ function Drink:setUp()
     -- Set sprite image to first frame of the animation
     local drinkSprite = gfx.sprite.new(drinkWobbleAnimationLoop:image())
 
-    -- Create droplet sprites
-    local droplet1 = gfx.image.new("Images/waterdrop01.png")
-    local droplet2 = gfx.image.new("Images/waterdrop02.png")
-    local dropletSprites = { gfx.sprite.new(droplet1), gfx.sprite.new(droplet2) }
+    -- Create droplets system
+    self.dropletsSystem = DropletsSystem()
+    self.dropletsSystem:setUp()
+    -- local droplet1 = gfx.image.new("Images/waterdrop01.png")
+    -- local droplet2 = gfx.image.new("Images/waterdrop02.png")
+    -- local dropletSprites = { gfx.sprite.new(droplet1), gfx.sprite.new(droplet2) }
 
     -- Create object    
     self.sprite = drinkSprite
     self.animationLoopWobble = drinkWobbleAnimationLoop
-    self.dropletSprites = dropletSprites
+    --self.dropletSprites = dropletSprites
 
     -- Modify sprite and animation loop
     self.sprite:setZIndex(-1)
@@ -154,13 +161,49 @@ function Drink:checkSpill(crankAccelSmpl1, crankAccelSmpl2)
             else animationTimer = playdate.timer.performAfterDelay(delay, stopWobbleAnimation) end -- Create timer
             if self.animationLoopWobble.paused then self.animationLoopWobble.paused = false end -- Play animation
 
-            -- Create and animate droplet sprites
-            self:createDroplets()
+            -- Create and animate droplet sprites            
+            --self:createDroplets(normalizedJerk)
+            self:createDropletsNew(normalizedJerk)
         end
     end
 end
 
-function Drink:createDroplets()                
+function Drink:createDropletsNew(normalizedJerk)
+    -- Check if all animators have ended
+    local count = #self.droplets
+    local animatorsEnded = true
+	if count > 0 then
+		for i = count, 1, -1 do
+			if not self.dropletsSystem:getDroplets()[i]:getAnimator():ended() then
+                animatorsEnded = false
+            end
+        end
+    end
+
+    -- If all animators have ended then create droplets
+    if animatorsEnded then
+        local numDroplets = math.random(5)
+        local drinkSpriteXPos, drinkSpriteYPos = self.sprite:getPosition()
+        local drinkSpriteXScale, drinkSpriteYScale = self.sprite:getScale()
+        local drinkSpriteWidth, drinkSpriteHeight = self.sprite:getSize()        
+
+        for i = numDroplets, 0, -1 do
+            self.dropletsSystem:createDroplet(
+                normalizedJerk,
+                self.origDrinkWidth,
+                drinkSpriteXScale,
+                drinkSpriteYScale,
+                drinkSpriteWidth,
+                drinkSpriteHeight,
+                drinkSpriteXPos,
+                drinkSpriteYPos,
+                numDroplets
+            )
+        end
+    end
+end
+
+function Drink:createDroplets(normalizedJerk)                
     
     -- Check if all animators have ended
     local count = #self.dropletAnimators
@@ -190,16 +233,24 @@ function Drink:createDroplets()
         local dropletSpawnYOffset = 0
         local dropletScaleModifier = 0.0
 
+        -- Create droplets
         for i = numDroplets, 0, -1 do
+            -- Using width of drink sprite, scale based on current scale and add randomisation to arc radius 
             dropletArcRadius = origDrinkWidth * drinkSpriteXScale + math.random(0, math.floor(drinkSpriteWidth / 4))
+            -- Set spawn point near mouth of glass, giving each droplet a random position within its own section
+            -- to achieve a random but even distribution of droplets
             dropletBaseSpawnX = drinkSpriteXPos - origDrinkWidth / 2 + origDrinkWidth / numDroplets * (numDroplets - i - 1)
             dropletSpawnPoint.x = dropletBaseSpawnX + math.random(0, math.floor(origDrinkWidth / numDroplets))
+            -- Set spawn point y position to be at the mouth of the glass, at the centre of the circle described by the arc radius        
             dropletSpawnYOffset = -(drinkSpriteHeight / 2) + dropletArcRadius    
             dropletSpawnPoint.y = drinkSpriteYPos + dropletSpawnYOffset
-            dropletScaleModifier = math.random()            
-            
+            -- Randomise size of droplets but more jerk should mean larger droplets
+            dropletScaleModifier = math.random() * normalizedJerk
+                        
+            -- Randomise direction droplet arc will take
             if math.random(0, 1) == 0 then clockwise = false else clockwise = true end
             
+            -- Choose where droplet will land based on direction of arc and segements of circle described by angles
             if clockwise then
                 dropletArcEndAngle = math.random(100, 125) 
             else
@@ -215,23 +266,30 @@ end
 
 function Drink:createDroplet(spawnPoint, arcRadius, arcEndAngle, clockwise, dropletScaleModifier)
     
+    -- Create droplet sprite and animator
     local arc = playdate.geometry.arc.new(spawnPoint.x, spawnPoint.y, arcRadius, 0, arcEndAngle, clockwise)
     local arcEndpoint = arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint
     local drinkSpriteXScale, drinkSpriteYScale = self.sprite:getScale()
     
-    print(arcEndpoint.x, " ", arcEndpoint.y)
+    -- If arc endpoint is above table then adjust arc to end at the edge of table
     if (arcEndpoint.y < 70) then
         arc = playdate.geometry.arc.new(spawnPoint.x, spawnPoint.y + 70 - arcEndpoint.y, arcRadius, 0, arcEndAngle, clockwise)
     end
 
+    -- Scale droplet based on current drink scale and random modifier
     local dropletScaleX, dropletScaleY = self.sprite:getScale()
     dropletScaleX = dropletScaleX * drinkSpriteXScale * dropletScaleModifier
     dropletScaleY = dropletScaleY * drinkSpriteXScale * dropletScaleModifier
     
+    -- Create animator for droplet
+    -- 1000 is the duration of the animation in milliseconds
+    -- playdate.easingFunctions.linear is the easing function to use for the animation
     local dropletAnimator = playdate.graphics.animator.new(1000, arc, playdate.easingFunctions.linear)
     dropletAnimator.repeatCount = 0
+    -- Keep track of droplet animator
     self.dropletAnimators[#self.dropletAnimators+1] = dropletAnimator
 
+    -- Draw droplets
     local dropletSprite = gfx.sprite.new()
     dropletSprite:setImage(self.dropletSprites[1]:getImage())
     dropletSprite:setZIndex(3)
@@ -255,11 +313,9 @@ function Drink:dryDroplets()
             local arcEndPoint = self.activeDroplets[i].arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint
             -- Get droplet position
             local dropletPosX, dropletPosY = self.activeDroplets[i].sprite:getPosition()
-
-            --print("Droplet: ", i, " ArcX: ", arcEndPoint.x, ", Arc Y: ", arcEndPoint.y, " | X: ", dropletPosX, ", Y: ", dropletPosY)
+            
             -- If droplet at end of arc set z-index of droplet sprite lower than drink's
             if math.floor(dropletPosX) == math.floor(arcEndPoint.x) and math.floor(dropletPosY) == math.floor(arcEndPoint.y) then
-                --print("Droplet: ", i, " ArcX: ", arcEndPoint.x, ", Arc Y: ", arcEndPoint.y, " | X: ", dropletPosX, ", Y: ", dropletPosY)
                 self.activeDroplets[i].sprite:setZIndex(1)
             end            
          end

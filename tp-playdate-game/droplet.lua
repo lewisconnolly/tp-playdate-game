@@ -13,7 +13,7 @@ function Droplet:init(
     Droplet.super.init(self)  
     self.sprite = sprite
     self.arc = playdate.geometry.arc.new(spawnPoint.x, spawnPoint.y, arcRadius, 0, arcEndAngle, clockwise)
-    self.arcEndpoint = arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint    
+    self.arcEndpoint = self.arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint    
     self.scaleModifier = scaleModifier
     self.animator = nil
 end

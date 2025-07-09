@@ -34,7 +34,8 @@ function DropletsSystem:createDroplet(
     drinkSpriteHeight,
     drinkSpriteXPos,
     drinkSpriteYPos,
-    numDroplets
+    numDroplets,
+    dropletId
 )
     
     local dropletSpawnPoint = {}
@@ -49,7 +50,7 @@ function DropletsSystem:createDroplet(
     dropletArcRadius = origDrinkWidth * drinkSpriteXScale + math.random(0, math.floor(drinkSpriteWidth / 4))
     -- Set spawn point near mouth of glass, giving each droplet a random position within its own section
     -- to achieve a random but even distribution of droplets
-    dropletBaseSpawnX = drinkSpriteXPos - origDrinkWidth / 2 + origDrinkWidth / numDroplets * (numDroplets - i - 1)
+    dropletBaseSpawnX = drinkSpriteXPos - origDrinkWidth / 2 + origDrinkWidth / numDroplets * (numDroplets - dropletId - 1)
     dropletSpawnPoint.x = dropletBaseSpawnX + math.random(0, math.floor(origDrinkWidth / numDroplets))
     -- Set spawn point y position to be at the mouth of the glass, at the centre of the circle described by the arc radius        
     dropletSpawnYOffset = -(drinkSpriteHeight / 2) + dropletArcRadius    
@@ -80,10 +81,13 @@ function DropletsSystem:createDroplet(
         dropletScaleModifier
     )
 
-    droplet:setUp(drinkSpriteXScale, drinkSpriteYScale)
-    --self.dropletAnimators[#self.dropletAnimators+1] = droplet:getAnimator()    
+    if droplet == nil then
+        error("droplet object is nil", 2)
+    end
+
+    droplet:setUp(drinkSpriteXScale, drinkSpriteYScale)    
     self.droplets[#self.droplets+1] = droplet
-    self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet.sprite, arc = droplet.arc}    
+    self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet:getSprite(), arc = droplet:getArc()}    
 end
 
 function DropletsSystem:dryDroplets()
@@ -93,13 +97,13 @@ function DropletsSystem:dryDroplets()
      if count > 0 then
          for i = count, 1, -1 do
             -- Get end of arc for current droplet
-            local arcEndPoint = self.activeDroplets[i]:getArc():pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint
+            local arcEndPoint = self.activeDroplets[i].arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint
             -- Get droplet position
-            local dropletXPos, dropletYPos = self.activeDroplets[i]:getSprite():getPosition()
+            local dropletXPos, dropletYPos = self.activeDroplets[i].sprite:getPosition()
             
             -- If droplet at end of arc set z-index of droplet sprite lower than drink's
             if math.floor(dropletXPos) == math.floor(arcEndPoint.x) and math.floor(dropletYPos) == math.floor(arcEndPoint.y) then
-                self.activeDroplets[i]:setSpriteZIndex(1)
+                self.activeDroplets[i].sprite:setZIndex(1)
             end            
          end
      end

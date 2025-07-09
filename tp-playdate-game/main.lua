@@ -2,6 +2,7 @@ GLOBALS = import "global"
 import "drink"
 import "track"
 import "roll"
+import "dropletsSystem"
 
 local gfx <const> = GLOBALS.gfx
 
@@ -28,6 +29,7 @@ local trackAbsorbency = 0.5
 local drink = nil
 local track = nil
 local roll = nil
+local dropletsSystem = nil
 
 function setUpBackground()
     
@@ -70,9 +72,13 @@ end
 
 function gameObjectsSetUp()
     
+    --Droplets system
+    dropletsSystem = DropletsSystem()
+    dropletsSystem:setUp()
+    
     -- Drink
     drink = Drink(drinkFillAmount, drinkStability, drinkStartScale, drinkFinishScale, drinkStartY, drinkFinishY, finalDrinkTargetPos)
-    drink:setUp()
+    drink:setUp(dropletsSystem)
 
     -- Track
     track = Track(trackStrength, trackRoughness, trackAbsorbency)
@@ -81,6 +87,8 @@ function gameObjectsSetUp()
     -- Roll
     roll = Roll()
     roll:setUp()
+
+    
 
 end
 
@@ -99,6 +107,10 @@ myGameSetUp()
 
 -- Called by the OS 30 times every second, runs game logic and moves sprites
 function playdate.update()
+    
+    if dropletsSystem == nil then
+        error("droplets system object is nil", 2)
+    end
     
     if drink == nil then
         error("drink object is nil", 2)
@@ -128,7 +140,7 @@ function playdate.update()
 
     -- Dry/fade droplets each frame
     --drink:dryDroplets()
-    drink.dropletsSystem:dryDroplets()
+    drink:getDropletsSystem():dryDroplets()
     
     -- Reset game
     if playdate.buttonIsPressed( playdate.kButtonA ) then

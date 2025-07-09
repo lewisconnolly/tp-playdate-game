@@ -1,5 +1,3 @@
-import "dropletsSystem"
-
 local gfx <const> = GLOBALS.gfx
 
 class('Drink').extends()
@@ -25,7 +23,7 @@ function Drink:init(fillAmount, stability, startScale, finishScale, startY, fini
     self.tipThreshold = stability * fillAmount -- Proportional to fillAmount
 end
 
-function Drink:setUp()
+function Drink:setUp(dropletsSystem)
     
     -- Create sprite and animation loop
     local wobbleFrameTime = 330 -- Each frame of the animation will last 500ms
@@ -36,9 +34,9 @@ function Drink:setUp()
     -- Set sprite image to first frame of the animation
     local drinkSprite = gfx.sprite.new(drinkWobbleAnimationLoop:image())
 
-    -- Create droplets system
-    self.dropletsSystem = DropletsSystem()
-    self.dropletsSystem:setUp()
+    -- Set droplets system
+    self.dropletsSystem = dropletsSystem
+    -- self.dropletsSystem:setUp()
     -- local droplet1 = gfx.image.new("Images/waterdrop01.png")
     -- local droplet2 = gfx.image.new("Images/waterdrop02.png")
     -- local dropletSprites = { gfx.sprite.new(droplet1), gfx.sprite.new(droplet2) }
@@ -61,6 +59,10 @@ function Drink:setUp()
             self.sprite:remove()
         end
     end
+end
+
+function Drink:getDropletsSystem()
+    return self.dropletsSystem
 end
 
 function Drink:move(crankTicks, trackInstance, horizonPcnt)
@@ -170,7 +172,7 @@ end
 
 function Drink:createDropletsNew(normalizedJerk)
     -- Check if all animators have ended
-    local count = #self.droplets
+    local count = #self.dropletsSystem:getDroplets()
     local animatorsEnded = true
 	if count > 0 then
 		for i = count, 1, -1 do
@@ -187,7 +189,7 @@ function Drink:createDropletsNew(normalizedJerk)
         local drinkSpriteXScale, drinkSpriteYScale = self.sprite:getScale()
         local drinkSpriteWidth, drinkSpriteHeight = self.sprite:getSize()        
 
-        for i = numDroplets, 0, -1 do
+        for dropletId = numDroplets, 0, -1 do
             self.dropletsSystem:createDroplet(
                 normalizedJerk,
                 self.origDrinkWidth,
@@ -197,7 +199,8 @@ function Drink:createDropletsNew(normalizedJerk)
                 drinkSpriteHeight,
                 drinkSpriteXPos,
                 drinkSpriteYPos,
-                numDroplets
+                numDroplets,
+                dropletId
             )
         end
     end

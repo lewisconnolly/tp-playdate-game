@@ -136,26 +136,35 @@ function DropletsSystem:createSmallDroplet(parentSpawnPoint, parentXScale, paren
 
     -- Track small droplets
     self.droplets[#self.droplets+1] = droplet
-    self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet:getSprite(), arc = droplet:getArc()}
+    --self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet:getSprite(), arc = droplet:getArc()}
 
 end
 
 function DropletsSystem:dryDroplets()
      
     -- Check spawned droplets are at end of arcs
-     local count = #self.activeDroplets
+     local count = #self.droplets
+     local iToRemove = {}
      if count > 0 then
          for i = count, 1, -1 do
             -- Get end of arc for current droplet
-            local arcEndPoint = self.activeDroplets[i].arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint
+            local arcEndPoint = self.droplets[i].arc:pointOnArc(10000, false) -- Distance a very large number and extend false to get endpoint
             -- Get droplet position
-            local dropletXPos, dropletYPos = self.activeDroplets[i].sprite:getPosition()
+            local dropletXPos, dropletYPos = self.droplets[i].sprite:getPosition()
             
             -- If droplet at end of arc set z-index of droplet sprite lower than drink's
             if math.floor(dropletXPos) == math.floor(arcEndPoint.x) and math.floor(dropletYPos) == math.floor(arcEndPoint.y) then                
                 --self.activeDroplets[i].sprite:setZIndex(1)
-                self.activeDroplets[i]:dry() -- Call dry method on droplet to remove sprite and play spill animation
+                self.droplets[i]:dry() -- Call dry method on droplet to remove sprite and play spill animation
+                table.insert(iToRemove, i) -- Add index of droplet to remove to remove list
             end            
          end
+     end
+     -- Remove drying droplets from array
+     for i = #iToRemove, 1, -1 do
+        local index = iToRemove[i]
+        if index <= #self.droplets then                        
+            table.remove(self.droplets, index) -- Remove droplet from droplets list
+        end
      end
 end

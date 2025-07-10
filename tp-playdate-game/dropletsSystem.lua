@@ -13,7 +13,7 @@ function DropletsSystem:init()
     -- Load droplet images
     local droplet1 = gfx.image.new("Images/waterdrop01.png")
     local droplet2 = gfx.image.new("Images/waterdrop02.png")
-    self.dropletSprites = { gfx.sprite.new(droplet1), gfx.sprite.new(droplet2) }    
+    self.dropletSprites = { gfx.sprite.new(droplet1), gfx.sprite.new(droplet2) }
 end
 
 function DropletsSystem:getDroplets()
@@ -90,8 +90,11 @@ function DropletsSystem:createDroplet(
     self.droplets[#self.droplets+1] = droplet
     self.activeDroplets[#self.activeDroplets+1] = {sprite = droplet:getSprite(), arc = droplet:getArc()}
 
-    -- Create same number of small droplets as the main droplet    
-    self:createSmallDroplet(dropletSpawnPoint, dropletXScale, dropletYScale)
+    -- Create random number of smaller droplets from this one
+    local numSmallDroplets = math.random(0, 5)
+    for i = numSmallDroplets, 0, -1 do
+        self:createSmallDroplet(dropletSpawnPoint, dropletXScale, dropletYScale)
+    end
 
 end
 
@@ -149,8 +152,9 @@ function DropletsSystem:dryDroplets()
             local dropletXPos, dropletYPos = self.activeDroplets[i].sprite:getPosition()
             
             -- If droplet at end of arc set z-index of droplet sprite lower than drink's
-            if math.floor(dropletXPos) == math.floor(arcEndPoint.x) and math.floor(dropletYPos) == math.floor(arcEndPoint.y) then
-                self.activeDroplets[i].sprite:setZIndex(1)
+            if math.floor(dropletXPos) == math.floor(arcEndPoint.x) and math.floor(dropletYPos) == math.floor(arcEndPoint.y) then                
+                --self.activeDroplets[i].sprite:setZIndex(1)
+                self.activeDroplets[i]:dry() -- Call dry method on droplet to remove sprite and play spill animation
             end            
          end
      end
